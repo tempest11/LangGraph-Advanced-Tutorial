@@ -93,6 +93,12 @@ dmypy.json
 *.sqlite3
 langgraph_checkpoints/
 
+# Large binary files
+*.tar
+*.tar.gz
+*.zip
+*.jar
+
 # Logs
 *.log
 logs/
