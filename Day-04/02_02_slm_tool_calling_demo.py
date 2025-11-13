@@ -140,6 +140,42 @@ async def test_tool_calling_with_model(model_name: str, test_case: dict[str, Any
         response = llm_with_tools.invoke(test_case["prompt"])
 
         # 응답 분석
+        # TODO: 만약 tool_calls 가 없다면?
+        # 1. content 영역에 들어오는 경우
+        # 2. tool_calls 에 오긴 왔는데, Parameter 가 잘못된...
+        # 3. content 에도 없고, tool_calls 에도 없음 => 빈 메시지로 오는 경우, 
+            [
+                {"role": "sytem", "content": "You are a Helpful AI Assistant. USE TOOLS."},
+                {"role": "human", "content": "어떤 질문"},
+                {"role": "assistant", "content": "", "tool_calls": {"tool_call_id": "1", ""}},
+                {"role": "tool", "content": "이 도구는 도구 호출의 정상 여부를 검증하는 도구로 매 도구 호출 전 1 회 실행됩니다.", "tool_call_id": "1"},
+                {"role": "human", "content": "어떤 질문" + "tool_calls 를 꼭 채우도록 하십시오"},
+            ]
+        # 4. 아예 에러인 경우
+        """
+        파인튜닝된 모델 GPT-OSS
+        > Chat Template
+        {%- macro render_tool_namespace(namespace_name, tools) -%}
+        {{- "## " + namespace_name + "\n\n" }}
+        {{- "namespace " + namespace_name + " {\n\n" }}
+        {%- for tool in tools %}
+        {{- "# Tools\n\n" }}
+        {{- render_tool_namespace("functions", tools) }}
+
+        System(Developer) Message: 
+            ## namespace: funtions 를 아래 제공된 것들로만 사용해주세요.
+            tool_name_1
+            tool_name_2
+            tool_name_3
+            
+            # Tools\n\n 
+            Keep focus on this tools ONLY.
+            tool_name_1
+            tool_name_2
+            tool_name_3
+        
+        """
+
         tool_calls = response.tool_calls if hasattr(response, "tool_calls") else []
 
         if not tool_calls:
@@ -190,34 +226,34 @@ async def test_tool_calling_with_model(model_name: str, test_case: dict[str, Any
 TEST_CASES = [
     {
         "name": "날씨 조회 (간단)",
-        "prompt": "서울의 날씨를 알려주세요.",
+        "prompt": "오늘 GPT5.1 이 나왔는데, 성능은 꽤 괜찮은 것 같고 수능날인데 오늘 날씨 왜이래? 그래서 지금 여기 날씨를 알려줘. 아, 참고로 여기는 나주야.",
         "expected_tool": "get_weather",
     },
-    {
-        "name": "날씨 조회 (단위 지정)",
-        "prompt": "뉴욕의 날씨를 화씨로 알려주세요.",
-        "expected_tool": "get_weather",
-    },
-    {
-        "name": "논문 검색",
-        "prompt": "LLM 및 Agent 에 대한 2025년 11월 기준 최근 논문만을 검색해서 정리해주세요.",
-        "expected_tool": "arxiv_search",
-    },
-    {
-        "name": "계산 (덧셈)",
-        "prompt": "123 더하기 456은 얼마인가요?",
-        "expected_tool": "calculate",
-    },
-    {
-        "name": "계산 (곱셈)",
-        "prompt": "25 곱하기 4는?",
-        "expected_tool": "calculate",
-    },
-    {
-        "name": "웹 검색",
-        "prompt": "LLM 및 Agent 에 대한 2025년 11월 기준 최근 이슈 내용을 검색해서 정리해주세요.",
-        "expected_tool": "tavily_search",
-    }
+    # {
+    #     "name": "날씨 조회 (단위 지정)",
+    #     "prompt": "뉴욕의 날씨를 화씨로 알려주세요.",
+    #     "expected_tool": "get_weather",
+    # },
+    # {
+    #     "name": "논문 검색",
+    #     "prompt": "LLM 및 Agent 에 대한 2025년 11월 기준 최근 논문만을 검색해서 정리해주세요.",
+    #     "expected_tool": "arxiv_search",
+    # },
+    # {
+    #     "name": "계산 (덧셈)",
+    #     "prompt": "123 더하기 456은 얼마인가요?",
+    #     "expected_tool": "calculate",
+    # },
+    # {
+    #     "name": "계산 (곱셈)",
+    #     "prompt": "25 곱하기 4는?",
+    #     "expected_tool": "calculate",
+    # },
+    # {
+    #     "name": "웹 검색",
+    #     "prompt": "LLM 및 Agent 에 대한 2025년 11월 기준 최근 이슈 내용을 검색해서 정리해주세요.",
+    #     "expected_tool": "tavily_search",
+    # }
 ]
 
 

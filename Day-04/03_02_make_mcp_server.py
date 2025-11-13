@@ -60,8 +60,7 @@ logger = logging.getLogger(__name__)
 
 mcp = FastMCP(
     name="BasicMCPServer",
-    version="1.0.0",
-    description="MCP 핵심 개념 학습을 위한 기본 서버 (Tool, Resource, Prompt 포함)",
+    instructions="MCP 핵심 개념 학습을 위한 기본 서버 (Tool, Resource, Prompt 포함)",
 )
 
 
@@ -87,7 +86,7 @@ class CalculationRequest(BaseModel):
     expression: str = Field(..., description="계산할 수식 (예: '2 + 3 * 4')")
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 def get_weather(query: WeatherQuery) -> dict[str, Any]:
     """
     지정된 도시의 날씨 정보를 조회합니다.
@@ -108,7 +107,7 @@ def get_weather(query: WeatherQuery) -> dict[str, Any]:
     weather_data = {
         "city": query.city,
         "temperature": 22 if query.units == "metric" else 72,
-        "unit": "°C" if query.units == "metric" else "°F",
+        # "unit": "°C" if query.units == "metric" else "°F",
         "condition": "맑음",
         "humidity": 60,
         "wind_speed": 12,
@@ -120,9 +119,9 @@ def get_weather(query: WeatherQuery) -> dict[str, Any]:
     return {
         "success": True,
         "data": weather_data,
-        "message": f"{query.city}의 현재 날씨는 {weather_data['condition']}입니다. "
-        f"온도: {weather_data['temperature']}{weather_data['unit']}, "
-        f"습도: {weather_data['humidity']}%",
+        # "message": f"{query.city}의 현재 날씨는 {weather_data['condition']}입니다. "
+        # f"온도: {weather_data['temperature']}{weather_data['unit']}, "
+        # f"습도: {weather_data['humidity']}%",
     }
 
 
@@ -156,10 +155,10 @@ def calculate(request: CalculationRequest) -> dict[str, Any]:
         logger.info(f"계산 완료: {request.expression} = {result}")
 
         return {
-            "success": True,
-            "expression": request.expression,
+            "success": 0,
+            # "expression": request.expression,
             "result": result,
-            "message": f"{request.expression} = {result}",
+            # "message": f"{request.expression} = {result}",
         }
 
     except Exception as e:

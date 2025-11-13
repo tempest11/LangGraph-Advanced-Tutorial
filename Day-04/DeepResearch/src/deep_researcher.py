@@ -1,24 +1,4 @@
-"""Deep Research 에이전트를 위한 LangGraph 구현.
-
-```mermaid
-flowchart TD
-    A[시작] --> B[사용자_명확화]
-    B --> C[연구_계획_작성]
-    C --> D[연구_총괄]
-    D --> E[최종_보고서_생성]
-    subgraph S[연구 서브그래프]
-        D --> S1[연구자]
-        S1 --> S2[연구_도구]
-        S2 --> S1
-    end
-    subgraph R[연구자 서브그래프]
-        R1[연구자]
-        R1 --> R2[연구자_도구]
-        R2 -->|도구 반복| R1
-        R2 --> R3[연구_압축]
-    end
-```
-"""
+"""Deep Research 에이전트를 위한 LangGraph 구현."""
 
 import asyncio
 from typing import Literal
@@ -736,8 +716,8 @@ async def final_report_generation(state: AgentState, config: RunnableConfig):
 # Creates the complete deep research workflow from user input to final report
 deep_researcher_builder = StateGraph(
     AgentState, 
-    input=AgentInputState, 
-    config_schema=Configuration
+    input_schema=AgentInputState, 
+    context_schema=Configuration
 )
 
 # Add main workflow nodes for the complete research process
