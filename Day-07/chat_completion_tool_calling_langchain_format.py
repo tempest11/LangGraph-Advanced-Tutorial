@@ -151,7 +151,7 @@ async def langchain_streaming_chat(
 
     system_prompt = """당신은 도움이 되는 AI 어시스턴트입니다. 
 사용자의 요청에 따라 적절한 도구를 사용하여 정확하고 유용한 정보를 제공하세요.
-항상 한국어로 친절하고 자세하게 답변해주세요.""",
+항상 한국어로 친절하고 자세하게 답변해주세요."""
 
     # LangChain Agent 생성
     agent = create_agent(model, LANGCHAIN_TOOLS, system_prompt=system_prompt)

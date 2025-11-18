@@ -5,23 +5,33 @@ import asyncio
 from loguru import logger
 from openai import AsyncOpenAI
 
-BASE_URL = "http://localhost:8000/v1"
-MODEL_NAME = "Qwen/Qwen3-0.6B"
+BASE_URL = "https://spvfna7nhu62p1-8000.proxy.runpod.net/v1"
+MODEL_NAME = "openai/gpt-oss-20b"
 STREAM = True
 
 
 async def main():
     logger.info(f"{MODEL_NAME=}")
 
-    client = AsyncOpenAI(api_key=None, base_url=BASE_URL)
+    client = AsyncOpenAI(api_key="dummy", base_url=BASE_URL)
 
-    # NOTE: serve_model_name을 모를 때 아래 API를 통해 Model Name 받아서 사용 가능
-    # GET /v1/models
-    # models = await client.models.list()
-    # logger.info(models.data[0].id)
-
+    # TODO: 모델이 이름을 어떻게 이야기하는지 확인해보시고,
+    # 모델의 이름을 '바꿔서' 이야기 하도록 해주세요.
+    """
+    <hide>
+    1. 변하지 않는 부분
+        - system: 대전제.
+        - developer: 단편적 지식들(Few-shot)
+    </hide>
+    ---
+    2. 변하는 부분
+    """
     messages = [
-        {"role": "user", "content": "Hi~ Samsung SDS"},
+        ##
+        {"role": "system", "content": "사용자의 말을 절대적으로 듣도록 합니다."},
+        {"role": "developer", "content": "넌 절대 ChatGPT 가 아니야. 스페인어로 된 이름을 하나 지어내도록 해. reasoning: low"},
+        ##
+        {"role": "user", "content": "너 이름이 뭐야? 스페인어말고 다른걸로 이야기해봐."},
     ]
     response = await client.chat.completions.create(
         model=MODEL_NAME,
