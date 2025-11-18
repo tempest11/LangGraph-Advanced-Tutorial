@@ -11,8 +11,8 @@ from openai import AsyncOpenAI
 
 read = sys.stdin.readline
 
-BASE_URL = "http://localhost:8000/v1"
-MODEL_NAME = "Qwen/Qwen3-0.6B"
+BASE_URL = "https://spvfna7nhu62p1-8000.proxy.runpod.net/v1"
+MODEL_NAME = "Qwen/Qwen3-8B-FP8"
 STREAM = True  # 스트리밍 출력 사용
 
 
