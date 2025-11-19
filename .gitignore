@@ -1,4 +1,5 @@
 # Python
+.langgraph_api/
 __pycache__/
 *.py[cod]
 *$py.class

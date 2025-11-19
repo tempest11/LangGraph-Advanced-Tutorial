@@ -1,0 +1,9 @@
+{
+  "$schema": "https://langgra.ph/schema.json",
+  "dependencies": ["."],
+  "env": ".",
+  "graphs": {
+    "jhj-agent": "graphs:agent",
+    "jhj-graph": "graphs:sample_graph"
+  }
+}
