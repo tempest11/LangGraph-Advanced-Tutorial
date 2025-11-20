@@ -1,11 +1,10 @@
 """DeepAgent 프레임워크를 사용한 딥 리서치 에이전트 구현입니다."""
 
-import os
 from datetime import datetime
 from typing import Any, Optional
 
 from deepagents import create_deep_agent
-from deepagents.backends import StateBackend, FilesystemBackend, CompositeBackend
+from deepagents.backends import FilesystemBackend
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph.state import CompiledStateGraph
 
@@ -104,15 +103,18 @@ async def create_deep_research_agent(
     # Update prompt to mention dynamic sub-agents
     orchestrator_prompt += "\n\nYou can also spawn dynamic sub-agents using the 'spawn_subagent' tool to handle specific complex tasks autonomously."
 
+    from utils import get_agent_workspace
+
     # DeepAgent 생성
     agent = create_deep_agent(
         model=model,
         tools=tools,
         system_prompt=orchestrator_prompt,
         subagents=subagents,
-        backend=lambda rt: StateBackend(
-            rt
-        ),  # 파일시스템 작업을 위한 StateBackend 사용 (런타임 설정으로 초기화)
+        backend=lambda rt: FilesystemBackend(
+            root_dir=get_agent_workspace("main_agent"),
+            virtual_mode=True,
+        ),  # 파일시스템 작업을 위한 FilesystemBackend 사용 (환경 변수 WORKSPACE_ROOT 지원)
         checkpointer=checkpointer,  # 세션 간 상태 영속화
         name="SeparateDeepAgentResearcher",
         debug=True,

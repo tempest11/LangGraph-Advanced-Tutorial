@@ -4,8 +4,11 @@ This module provides functionality to create sub-agents dynamically at runtime.
 These sub-agents are configured with specific tools and goals.
 """
 
+from typing import List, Any
 from deepagents import create_deep_agent
-from deepagents.backends import StateBackend
+from loguru import logger
+from deepagents.backends import FilesystemBackend
+from utils import get_agent_workspace
 
 
 def create_dynamic_subagent(
@@ -43,13 +46,17 @@ IMPORTANT:
 Work autonomously to achieve your goal. When finished, provide a concise summary of what you did and where the results are stored.
 """
 
+    # 에이전트 전용 워크스페이스 생성 (환경 변수 WORKSPACE_ROOT 지원)
+    workspace_dir = get_agent_workspace(name)
+    logger.info(f"Created dynamic sub-agent '{name}' with workspace: {workspace_dir}")
+
     # Create the agent using the deepagents framework
     # We use a simpler configuration for sub-agents than the main orchestrator
     agent = create_deep_agent(
         model=model,
         tools=tools,
         system_prompt=system_prompt,
-        backend=lambda rt: StateBackend(rt),
+        backend=lambda rt: FilesystemBackend(root_dir=workspace_dir, virtual_mode=True),
         name=name,
         debug=True,
     )

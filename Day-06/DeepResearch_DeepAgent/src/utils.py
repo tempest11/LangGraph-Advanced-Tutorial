@@ -3,11 +3,14 @@
 import asyncio
 import logging
 import os
+import sys
 import warnings
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal
 
+from loguru import logger
 import aiohttp
+
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import (
@@ -33,6 +36,78 @@ from configuration import DeepAgentConfiguration, SearchAPI
 from prompts.webpage_summarize import summarize_webpage_prompt
 from state import ResearchComplete, Summary
 
+# Configure loguru
+logger.remove()
+logger.add(sys.stderr, level="INFO")
+logger.add("deep_agent.log", rotation="10 MB", level="DEBUG")
+
+
+# Redirect standard logging to loguru
+class InterceptHandler(logging.Handler):
+    def emit(self, record):
+        try:
+            level = logger.level(record.levelname).name
+        except ValueError:
+            level = record.levelno
+
+        frame, depth = logging.currentframe(), 2
+        while frame.f_code.co_filename == logging.__file__:
+            frame = frame.f_back
+            depth += 1
+
+        logger.opt(depth=depth, exception=record.exc_info).log(
+            level, record.getMessage()
+        )
+
+
+logging.basicConfig(handlers=[InterceptHandler()], level=0)
+
+
+# Workspace configuration
+def get_workspace_root() -> str:
+    """워크스페이스 루트 디렉토리 경로를 반환합니다.
+
+    환경 변수 WORKSPACE_ROOT가 설정되어 있으면 해당 경로를 사용하고,
+    없으면 프로젝트 루트의 'workspace' 디렉토리를 사용합니다.
+
+    도커 환경이나 다른 배포 환경에서도 유연하게 대응할 수 있습니다.
+
+    Returns:
+        절대 경로 형식의 워크스페이스 루트 디렉토리 경로
+    """
+    from pathlib import Path
+
+    # 환경 변수에서 먼저 확인
+    workspace_root = os.getenv("WORKSPACE_ROOT")
+    if workspace_root:
+        return str(Path(workspace_root).resolve())
+
+    # 기본값: 프로젝트 루트의 workspace 디렉토리
+    # __file__은 utils.py의 경로이므로 parent.parent가 프로젝트 루트
+    project_root = Path(__file__).parent.parent
+    return str(project_root / "workspace")
+
+
+def get_agent_workspace(agent_name: str) -> str:
+    """특정 에이전트의 워크스페이스 경로를 반환합니다.
+
+    Args:
+        agent_name: 에이전트 이름 (예: "main_agent", "researcher_01")
+
+    Returns:
+        해당 에이전트의 워크스페이스 절대 경로
+    """
+    from pathlib import Path
+
+    workspace_root = get_workspace_root()
+    agent_workspace = Path(workspace_root) / agent_name
+
+    # 디렉토리가 없으면 생성
+    agent_workspace.mkdir(parents=True, exist_ok=True)
+
+    return str(agent_workspace)
+
+
 ##########################
 # Tavily 검색 도구 유틸리티
 ##########################
@@ -46,7 +121,9 @@ TAVILY_SEARCH_DESCRIPTION = (
 async def tavily_search(
     queries: list[str],
     max_results: Annotated[int, InjectedToolArg] = 5,
-    topic: Annotated[Literal["general", "news", "finance"], InjectedToolArg] = "general",
+    topic: Annotated[
+        Literal["general", "news", "finance"], InjectedToolArg
+    ] = "general",
     config: RunnableConfig | None = None,
 ) -> str:
     """Fetch and summarize search results from Tavily search API.
@@ -62,7 +139,11 @@ async def tavily_search(
     """
     # 단계 1: 검색 쿼리를 비동기적으로 실행
     search_results = await tavily_search_async(
-        queries, max_results=max_results, topic=topic, include_raw_content=True, config=config
+        queries,
+        max_results=max_results,
+        topic=topic,
+        include_raw_content=True,
+        config=config,
     )
 
     # 단계 2: 동일한 콘텐츠를 여러 번 처리하지 않도록 URL로 결과 중복 제거
@@ -100,7 +181,9 @@ async def tavily_search(
     summarization_tasks = [
         noop()
         if not result.get("raw_content")
-        else summarize_webpage(summarization_model, result["raw_content"][:max_char_to_include])
+        else summarize_webpage(
+            summarization_model, result["raw_content"][:max_char_to_include]
+        )
         for result in unique_results.values()
     ]
 
@@ -197,10 +280,7 @@ async def summarize_webpage(model: BaseChatModel, webpage_content: str) -> str:
         )
 
         # 구조화된 섹션으로 요약 포맷
-        formatted_summary = (
-            f"<summary>\n{summary.summary}\n</summary>\n\n"
-            f"<key_excerpts>\n{summary.key_excerpts}\n</key_excerpts>"
-        )
+        formatted_summary = f"<summary>\n{summary.summary}\n</summary>\n\n<key_excerpts>\n{summary.key_excerpts}\n</key_excerpts>"
 
         return formatted_summary
 
@@ -280,7 +360,9 @@ async def get_mcp_access_token(
             token_url = base_mcp_url.rstrip("/") + "/oauth/token"
             headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
-            async with session.post(token_url, headers=headers, data=form_data) as response:
+            async with session.post(
+                token_url, headers=headers, data=form_data
+            ) as response:
                 if response.status == 200:
                     # 토큰 획득 성공
                     token_data = await response.json()
@@ -497,7 +579,11 @@ async def load_mcp_tools(
         auth_headers = {"Authorization": f"Bearer {mcp_tokens['access_token']}"}
 
     mcp_server_config = {
-        "server_1": {"url": server_url, "headers": auth_headers, "transport": "streamable_http"}
+        "server_1": {
+            "url": server_url,
+            "headers": auth_headers,
+            "transport": "streamable_http",
+        }
     }
     # TODO: OAP에 Multi-MCP Server 지원이 병합되면 이 코드 업데이트
 
@@ -514,7 +600,9 @@ async def load_mcp_tools(
     for mcp_tool in available_mcp_tools:
         # 충돌하는 이름의 도구는 건너뛰기
         if mcp_tool.name in existing_tool_names:
-            warnings.warn(f"MCP 도구 '{mcp_tool.name}'이(가) 기존 도구 이름과 충돌 - 건너뛰기")
+            warnings.warn(
+                f"MCP 도구 '{mcp_tool.name}'이(가) 기존 도구 이름과 충돌 - 건너뛰기"
+            )
             continue
 
         # 구성에 지정된 도구만 포함
@@ -584,7 +672,8 @@ async def get_all_tools(config: RunnableConfig):
 
     # 충돌을 방지하기 위해 기존 도구 이름 추적
     existing_tool_names = {
-        tool.name if hasattr(tool, "name") else tool.get("name", "web_search") for tool in tools
+        tool.name if hasattr(tool, "name") else tool.get("name", "web_search")
+        for tool in tools
     }
 
     # 구성된 경우 MCP 도구 추가
@@ -596,7 +685,9 @@ async def get_all_tools(config: RunnableConfig):
 
 def get_notes_from_tool_calls(messages: list[MessageLikeRepresentation]):
     """도구 호출 메시지에서 노트를 추출합니다."""
-    return [tool_msg.content for tool_msg in filter_messages(messages, include_types="tool")]
+    return [
+        tool_msg.content for tool_msg in filter_messages(messages, include_types="tool")
+    ]
 
 
 ##########################
@@ -711,7 +802,9 @@ def _check_openai_token_limit(exception: Exception, error_str: str) -> bool:
     module_name = getattr(exception.__class__, "__module__", "")
 
     # OpenAI 예외인지 확인
-    is_openai_exception = "openai" in exception_type.lower() or "openai" in module_name.lower()
+    is_openai_exception = (
+        "openai" in exception_type.lower() or "openai" in module_name.lower()
+    )
 
     # 일반적인 OpenAI 토큰 제한 오류 유형 확인
     is_request_error = class_name in ["BadRequestError", "InvalidRequestError"]
@@ -727,7 +820,10 @@ def _check_openai_token_limit(exception: Exception, error_str: str) -> bool:
         error_code = getattr(exception, "code", "")
         error_type = getattr(exception, "type", "")
 
-        if error_code == "context_length_exceeded" or error_type == "invalid_request_error":
+        if (
+            error_code == "context_length_exceeded"
+            or error_type == "invalid_request_error"
+        ):
             return True
 
     return False
@@ -764,10 +860,15 @@ def _check_gemini_token_limit(exception: Exception, error_str: str) -> bool:
     module_name = getattr(exception.__class__, "__module__", "")
 
     # Google/Gemini 예외인지 확인
-    is_google_exception = "google" in exception_type.lower() or "google" in module_name.lower()
+    is_google_exception = (
+        "google" in exception_type.lower() or "google" in module_name.lower()
+    )
 
     # Google 특정 리소스 고갈 오류 확인
-    is_resource_exhausted = class_name in ["ResourceExhausted", "GoogleGenerativeAIFetchError"]
+    is_resource_exhausted = class_name in [
+        "ResourceExhausted",
+        "GoogleGenerativeAIFetchError",
+    ]
 
     if is_google_exception and is_resource_exhausted:
         return True

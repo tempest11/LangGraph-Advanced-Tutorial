@@ -283,7 +283,7 @@ def format_orchestrator_prompt(
 - Check if the user's question is clear and specific
 - If vague/ambiguous: Ask clarifying questions, write "CLARIFYING" to `/status/current_stage.txt`, and STOP
 - If clear: Write "PLANNING" to `/status/current_stage.txt` and proceed""",
-        clarification_stage
+        clarification_stage,
     )
 
     return base_prompt.format(

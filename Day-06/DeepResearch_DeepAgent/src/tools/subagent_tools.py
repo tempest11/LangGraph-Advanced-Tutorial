@@ -66,6 +66,10 @@ class SpawnSubAgent(BaseTool):
             # However, for this environment, we might be running in an async loop already.
             # Let's implement _arun as well.
 
+            from loguru import logger
+
+            logger.info(f"Spawning sub-agent '{name}' with goal: {goal}")
+
             # For sync execution (if called synchronously)
             result = subagent.invoke(initial_state)
 
@@ -75,11 +79,14 @@ class SpawnSubAgent(BaseTool):
             if messages:
                 last_message = messages[-1]
                 content = last_message.content
+                logger.info(f"Sub-agent '{name}' finished successfully.")
                 return f"Sub-agent '{name}' finished.\n\nResult:\n{content}"
             else:
+                logger.warning(f"Sub-agent '{name}' finished but returned no messages.")
                 return f"Sub-agent '{name}' finished but returned no messages."
 
         except Exception as e:
+            logger.error(f"Error running sub-agent '{name}': {str(e)}")
             return f"Error running sub-agent '{name}': {str(e)}"
 
     async def _arun(self, name: str, goal: str, skills: List[str]) -> str:
@@ -104,15 +111,24 @@ class SpawnSubAgent(BaseTool):
         initial_state = {"messages": [{"role": "user", "content": goal}]}
 
         try:
+            from loguru import logger
+
+            logger.info(f"Spawning sub-agent '{name}' (async) with goal: {goal}")
+
             result = await subagent.ainvoke(initial_state)
 
             messages = result.get("messages", [])
             if messages:
                 last_message = messages[-1]
                 content = last_message.content
+                logger.info(f"Sub-agent '{name}' (async) finished successfully.")
                 return f"Sub-agent '{name}' finished.\n\nResult:\n{content}"
             else:
+                logger.warning(
+                    f"Sub-agent '{name}' (async) finished but returned no messages."
+                )
                 return f"Sub-agent '{name}' finished but returned no messages."
 
         except Exception as e:
+            logger.error(f"Error running sub-agent '{name}' (async): {str(e)}")
             return f"Error running sub-agent '{name}': {str(e)}"
