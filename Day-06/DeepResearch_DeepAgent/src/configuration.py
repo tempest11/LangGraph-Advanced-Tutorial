@@ -122,12 +122,16 @@ class DeepAgentConfiguration(BaseModel):
         configurable = config.get("configurable", {})
 
         return cls(
-            main_model=configurable.get("main_model", cls.model_fields["main_model"].default),
+            main_model=configurable.get(
+                "main_model", cls.model_fields["main_model"].default
+            ),
             researcher_model=configurable.get("researcher_model"),
             summarization_model=configurable.get(
                 "summarization_model", cls.model_fields["summarization_model"].default
             ),
-            search_api=configurable.get("search_api", cls.model_fields["search_api"].default),
+            search_api=configurable.get(
+                "search_api", cls.model_fields["search_api"].default
+            ),
             max_parallel_researchers=configurable.get(
                 "max_parallel_researchers",
                 cls.model_fields["max_parallel_researchers"].default,

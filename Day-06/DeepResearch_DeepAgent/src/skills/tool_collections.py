@@ -17,7 +17,9 @@ ARXIV_SKILL_TOOLS = ["arxiv_search"]  # MCP를 통해 사용 가능한 경우
 SERPER_SKILL_TOOLS = ["serper_search"]  # MCP를 통해 사용 가능한 경우
 
 
-def get_tool_names_for_skill(skill_name: Literal["research", "web", "arxiv", "compression", "critique"]) -> list[str]:
+def get_tool_names_for_skill(
+    skill_name: Literal["research", "web", "arxiv", "compression", "critique"],
+) -> list[str]:
     """특정 스킬 도메인에 대한 도구 이름을 가져옵니다.
 
     Args:

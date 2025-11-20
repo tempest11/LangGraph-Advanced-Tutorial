@@ -9,9 +9,9 @@ from deepagents.backends import StateBackend, FilesystemBackend, CompositeBacken
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph.state import CompiledStateGraph
 
-from subagents.compressor import create_compressor_subagent_config
-from subagents.critic import create_critic_subagent_config
-from subagents.researcher import create_researcher_subagent_config
+from subagents.compressor import create_compressor_subagent
+from subagents.critic import create_critic_subagent
+from subagents.researcher import create_researcher_subagent
 
 from prompts.orchestrator import format_orchestrator_prompt
 
@@ -64,21 +64,33 @@ async def create_deep_research_agent(
     # 프롬프트에 사용할 현재 날짜 가져오기
     date = get_today_str()
 
+    # Register tools with the global registry
+    from skills.registry import registry
+
+    for tool in tools:
+        registry.register_tool(tool)
+
+    # Add SpawnSubAgent tool
+    from tools.subagent_tools import SpawnSubAgent
+
+    spawn_tool = SpawnSubAgent()
+    tools.append(spawn_tool)
+
     # 서브에이전트 설정 생성
-    researcher_config = create_researcher_subagent_config(
+    researcher_config = create_researcher_subagent(
         tools=tools,
         date=date,
         mcp_prompt=mcp_prompt,
     )
 
-    compressor_config = create_compressor_subagent_config(date=date)
+    compressor_config = create_compressor_subagent(date=date)
 
     # 서브에이전트 리스트 구성
     subagents = [researcher_config, compressor_config]
 
     # 선택적으로 비평가 추가
     if enable_critique:
-        critic_config = create_critic_subagent_config(date=date)
+        critic_config = create_critic_subagent(date=date)
         subagents.append(critic_config)
 
     # 오케스트레이터 시스템 프롬프트 포맷팅
@@ -89,13 +101,18 @@ async def create_deep_research_agent(
         mcp_prompt=mcp_prompt,
     )
 
+    # Update prompt to mention dynamic sub-agents
+    orchestrator_prompt += "\n\nYou can also spawn dynamic sub-agents using the 'spawn_subagent' tool to handle specific complex tasks autonomously."
+
     # DeepAgent 생성
     agent = create_deep_agent(
         model=model,
         tools=tools,
         system_prompt=orchestrator_prompt,
         subagents=subagents,
-        backend=lambda rt: StateBackend(rt),  # 파일시스템 작업을 위한 StateBackend 사용 (런타임 설정으로 초기화)
+        backend=lambda rt: StateBackend(
+            rt
+        ),  # 파일시스템 작업을 위한 StateBackend 사용 (런타임 설정으로 초기화)
         checkpointer=checkpointer,  # 세션 간 상태 영속화
         name="SeparateDeepAgentResearcher",
         debug=True,
@@ -164,4 +181,3 @@ async def run_research(
     )
 
     return result
-
